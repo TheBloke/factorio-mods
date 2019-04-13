@@ -1,0 +1,11 @@
+{
+    "name": "GraphTool",
+    "version": "0.1.0",
+    "title": "Graph Tool",
+    "author": "TheBloke",
+    "contact": "",
+    "homepage": "",
+    "factorio_version": "0.17",
+    "dependencies": ["base >= 0.17", "stdlib >= 1.0.2"],
+    "description": "Tool for graphing."
+}
