@@ -2,6 +2,7 @@ require 'mod-gui'
 local Entity = require('__stdlib__/stdlib/entity/entity')
 local Gui = require('__stdlib__/stdlib/event/gui')
 local table = require('__stdlib__/stdlib/utils/table')
+local Event = require('__stdlib__/stdlib/event/event')
 
 local gui_build = require('gui_build')
 
@@ -90,7 +91,6 @@ function Graphtool:onTick()
         for _, signal in ipairs(network.signals) do
           self.stats.on_flow("graphtool-" .. colour .. "-" .. signal.signal.name, signal.count/60)
           self.items[signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
-          --graphtool.csv.log(signal.signal.name, signal.count)
         end
       end
     end
@@ -98,30 +98,60 @@ function Graphtool:onTick()
 end
 
 function Graphtool:removeGui(player_index)
-  if self.ui[player_index] then
-    self.ui[player_index].root.clear()
-    --self.ui[player_index] = {}
+  if self.ui[player_index] and self.ui[player_index].root and self.ui[player_index].root["Graphtool"] then
+    self.ui[player_index].root["Graphtool"].destroy()
+    if self.events then
+      for _, event in pairs(self.events) do
+        Event.remove(table.unpack(event))
+      end
+    end
   end
 end
 
-function Graphtool:addToGui(player, parent, element)
-  local player_index = player.index
+local onEvent =
+  {
+    __call = function(self, ...)
+      return self.on(...)
+    end,
+    __index = onEvent
+  }
 
-  return parent.add{element}
+function onEvent:itemButton(event)
+  log("onEvent:on, event: " .. serpent.block(event))
+  self.element = event.element
+  self.player_index = element.player_index
+  self.GP = get_player_data(player_index)
 end
 
-function Graphtool.onButton(event)
-  log("onButton")
-  if event then
-    log("event: ".. serpent.block(event))
-    log("element: ".. serpent.block(event.element))
-    log("element.name: ".. event.element.name)
+local onEvent = {}
+local doEvent = {}
+
+local onEvent_mt =
+  {
+    __index = function(_, k)
+      if doEvent[k] then
+        return function(event)
+          local element = event.element
+          local player_index = element.player_index
+          local GP = get_player_data(player_index)
+          return doEvent[k](element, GP, player_index)
+        end
+       end
+    end
+  }
+
+setmetatable(onEvent, onEvent_mt)
+
+function doEvent.itemButton(element, GP, player_index)
+  log("in itemButton")
+  local tableRow = GP.ui[player_index].root["Graphtool"]["tableFrame"]["itemScroll"]["tableRow"]
+  tableRow.clear()
+  for item_name, item_table in pairs(GP.items) do
+    tableRow.add{type = "choose-elem-button", elem_type = "signal", signal = {type=item_table.item_type, name=item_name} }
+    tableRow.add{type = "label", name = item_name .. "-type", caption = item_table.item_type}
+    tableRow.add{type = "label", name = item_name .. "-name", caption = item_name}
   end
-end
-
-local function el(eltype, elname, config)
-  local tab = { type = eltype, name = elname }
-  return table.merge(tab, config)
+  log("done itemButton")
 end
 
 local function gui_layout()
@@ -159,7 +189,7 @@ local function gui_layout()
             {
               { type = "flow",            name = "itemButtonRow", direction = "horizontal", children =
                 {
-                  { type = "button",      name = "itemButton", caption = "Items", callback = doEvent:itemButton() }
+                  { type = "button",      name = "itemButton", caption = "Items", callback = onEvent.itemButton }
                 }
               },
               { type = "scroll-pane",     name = "itemScroll", direction = "vertical", children =
@@ -174,24 +204,6 @@ local function gui_layout()
     }
 end
 
-local function glayout2()
-  return
-    {
-      el("frame","Graphtool", {caption = "Graphtool", direction = "vertical" , children =
-        {
-          el("frame","configFrame", {caption = "Configuration", direction = "vertical", children =
-            {
-              el("flow","configRow1", {direction = "horizontal", children =
-                {
-                  el("label","label-Graphing", {caption = "Graphing" } ),
-                  el("radiobutton","radio-Graphing-on", {caption = "On", state = true } ),
-                  el("radiobutton","radio-Graphing-off", {caption = "On", state = true } ),
-                }})
-            }}),
-       }})
-   }
-end
-
 function Graphtool:createGui(player_index)
   local player = game.players[player_index]
   if not self.ui[player_index] then
@@ -204,81 +216,15 @@ function Graphtool:createGui(player_index)
 
   local UI = self.ui[player_index]
 
-  UI.root = player.gui.left
+  --UI.root = player.gui.left
+  UI.root = mod_gui.get_frame_flow(player)
 
-  gui_build.gui_elem_iter(gui_layout(), UI.root)
+  self.events = {}
+  gui_build.gui_elem_iter(gui_layout(), UI.root, self.events)
+  log("self.events : " .. serpent.block(self.events))
 
-  --[[
-  local topframe = UI.root.add{type = "frame", name = "Graphtool", caption = "Graphtool", direction="vertical"}
-  local configFrame = topframe.add{type = "frame", name = "configFrame", caption = "Configuration", direction = "vertical"}
-  local configRow1 = configFrame.add{type = "flow", direction="horizontal"}
-
-  local configRow1 = UI.root.Graphtool.configFrame.add{type = "flow", direction="horizontal"}
-
-  local toggleBoxCaption = configRow1.add{type = "label", caption = "Graphing"}
-  local c1t = configRow1.add{type = "radiobutton", caption = "On", state = true}
-  local c1t = configRow1.add{type = "radiobutton", caption = "Off", state = false}
-
-  local configRow2 = configFrame.add{type = "flow", direction="horizontal"}
-
-  local periodBoxCaption = configRow2.add{type = "label", caption = "Ticks per read"}
-  local periodField = configRow2.add{type = "textfield", text = "1", vertical_align = "center", vertically_stretchable = true }
-  periodField.style.width = 25
-  periodField.style.vertical_align = "center"
-  local periodSlider = configRow2.add{type = "slider", minimum_value = 1, maximum_value = 60, value=1 }
-  periodSlider.style.vertical_align = "center"
-
-  local configRow3 = configFrame.add{type = "flow", direction="horizontal"}
-
-  local csvNameCaption = configRow3.add{type = "label", caption = "CSV Filename"}
-  local csvName = configRow3.add{type = "textfield", name = "csvName", caption = "CSV Filanem"}
-
-  --local tableFrame = topframe.add{type = "frame", name = "tableFrame", caption = "Items", direction = "horizontal"}
-  --local itemButtonRow = tableFrame.add{type = "flow", name = "itemButtonRow", direction="horizontal"}
-  --local itemButton = itemButtonRow.add{type = "button", name = "itemButton", caption = "Items"}
-
-  --local itemScroll = tableFrame.add{type = "scroll-pane", name = "itemScroll", caption = "Items", direction = "vertical"}
-  --local tableRow = itemScroll.add{type = "table", name = "tableRow",
-  --                               direction = "horizontal", column_count = 3}
-
-  --Gui.on_click(itemButton.name, function(e) Graphtool.onButton(e) end )
-  --]]
   set_player_data(player_index, self)
 end
 
-
-doEvent = {}
-
-local onEvent =
-  {
-    __call = function(self, ...)
-      return self.on(...)
-    end,
-    __index = onEvent
-  }
-setmetatable(doEvent, onEvent)
-
-function onEvent:on(event)
-  log("onEvent:on, event: " .. serpent.block(event))
-  self.element = event.element
-  self.player_index = element.player_index
-  self.GP = get_player_data(player_index)
-end
-
-function doEvent:itemButton(event)
-  log("doEvent.itemButton")
-  log("got element: " .. self.element.name)
-  --local element = event.element
-  --local player_index = element.player_index
-  --local GP = get_player_data(player_index)
-  local tableRow = self.GP.ui[self.player_index].root["Graphtool"]["tableFrame"]["itemScroll"]["tableRow"]
-
-  tableRow.clear()
-  for item_name, item_table in pairs(self.GP.items) do
-    tableRow.add{type = "choose-elem-button", elem_type = "signal", signal = {type=item_table.item_type, name=item_name} }
-    tableRow.add{type = "label", name = item_name .. "-type", caption = item_table.item_type}
-    tableRow.add{type = "label", name = item_name .. "-name", caption = item_name}
-  end
-end
 
 return Graphtool

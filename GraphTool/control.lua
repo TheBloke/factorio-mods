@@ -79,6 +79,5 @@ Event.register({evs.on_entity_died, evs.on_pre_player_mined_item, evs.robot_pre_
 Event.register(evs.on_tick, onTick)
 Event.register(evs.on_gui_opened, function(e) toggleGui(e, "open") end)
 Event.register(evs.on_gui_closed, function(e) toggleGui(e, "close") end)
---Event.register(evs.on_gui_value_changed, guiValue)
 Event.on_load(onLoad)
 --]]
