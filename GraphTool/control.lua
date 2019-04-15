@@ -15,36 +15,36 @@ local function onPlaceEntity(event)
   end
 
   if entity.name == 'graphtool' then
-    if not global._GPs then global._GPs = {} end
-    global._GPs[entity.unit_number] = Graphtool(entity)
+    if not global._GTs then global._GTs = {} end
+    global._GTs[entity.unit_number] = Graphtool(entity)
   end
 end
 
 local function onRemoveEntity(event)
   local eventEntity = event.entity
   if eventEntity.name == 'graphtool' then
-    global._GPs[eventEntity.unit_number]:destroy()
-    global._GPs[eventEntity.unit_number] = nil
+    global._GTs[eventEntity.unit_number]:destroy()
+    global._GTs[eventEntity.unit_number] = nil
   end
 end
 
 local function onTick(event)
-  if not global._GPs then return end
+  if not global._GTs then return end
 
-  for _, GP in pairs(global._GPs) do
-    GP:onTick()
+  for _, GT in pairs(global._GTs) do
+    GT:onTick()
   end
 end
 
 local function toggleGui(event, action)
   if event.entity and event.entity.name == "graphtool" then
     local player_index = event.player_index
-    local GP = global._GPs[event.entity.unit_number]
-    if GP then
+    local GT = global._GTs[event.entity.unit_number]
+    if GT then
       if action == "open" then
-        GP:createGui(player_index)
+        GT:createGui(player_index)
       elseif action == "close" then
-        GP:removeGui(player_index)
+        GT:removeGui(player_index)
       end
     end
   end
@@ -55,11 +55,11 @@ local function config_changed(event)
 end
 
 local function onLoad()
-  if global._GPs then
-    for _, GP in pairs(global._GPs) do
-      Graphtool.metatable(GP) -- rebuild metatables for the Graphtool objects
-      GP:GB_metatable()       -- rebuild metatables for the Guibuild object(s)
-      GP:removeAllGui()       -- remove any open GUIs, as their events can't work post-load. User(s) can just re-open them.
+  if global._GTs then
+    for _, GT in pairs(global._GTs) do
+      Graphtool.metatable(GT) -- rebuild metatables for the Graphtool objects
+      GT:GTG_metatable()       -- rebuild metatables for the Guibuild object(s)
+      GT:removeAllGui()       -- remove any open GUIs, as their events can't work post-load. User(s) can just re-open them.
     end
   end
 end
