@@ -23,7 +23,7 @@ end
 local function onRemoveEntity(event)
   local eventEntity = event.entity
   if eventEntity.name == 'graphtool' then
-    global._GPs[eventEntity.unit_number]:destroy(event.player_index)
+    global._GPs[eventEntity.unit_number]:destroy()
     global._GPs[eventEntity.unit_number] = nil
   end
 end
@@ -57,7 +57,9 @@ end
 local function onLoad()
   if global._GPs then
     for _, GP in pairs(global._GPs) do
-      Graphtool.metatable(GP)
+      Graphtool.metatable(GP) -- rebuild metatables for the Graphtool objects
+      GP:GB_metatable()       -- rebuild metatables for the Guibuild object(s)
+      GP:removeAllGui()       -- remove any open GUIs, as their events can't work post-load. User(s) can just re-open them.
     end
   end
 end

@@ -1,10 +1,10 @@
 require 'mod-gui'
 local Entity = require('__stdlib__/stdlib/entity/entity')
-local Gui = require('__stdlib__/stdlib/event/gui')
-local table = require('__stdlib__/stdlib/utils/table')
-local Event = require('__stdlib__/stdlib/event/event')
+--local Event = require('__stdlib__/stdlib/event/event')
 
-local gui_build = require('gui_build')
+local table = require('__stdlib__/stdlib/utils/table')
+
+local Guibuild = require('gui_build')
 
 local function get_player_data(player_index)
     if global.player_data == nil then
@@ -70,17 +70,18 @@ function Graphtool.new(entity)
                                             force = entity.force}
   GP.stats = GP.pole.electric_network_statistics
 
-  setmetatable(GP, GP_meta)
+  Graphtool.metatable(GP, GP_meta)
   Graphtool._cache[entity.unit_number] = GP
 
   return GP
 end
 
-function Graphtool:destroy(player_index)
-  self:removeGui(player_index)
+function Graphtool:destroy()
+  self:removeAllGui()
   self.stats = nil
   self.pole.destroy()
   Graphtool._cache[self.entity] = nil
+  self = nil
 end
 
 function Graphtool:onTick()
@@ -97,30 +98,20 @@ function Graphtool:onTick()
   end
 end
 
-function Graphtool:removeGui(player_index)
-  if self.ui[player_index] and self.ui[player_index].root and self.ui[player_index].root["Graphtool"] then
-    self.ui[player_index].root["Graphtool"].destroy()
-    if self.events then
-      for _, event in pairs(self.events) do
-        Event.remove(table.unpack(event))
-      end
+function Graphtool:removeAllGui()
+  if self.ui then
+    for player_index, _ in pairs(self.ui) do
+      self:removeGui(player_index)
     end
   end
 end
 
-local onEvent =
-  {
-    __call = function(self, ...)
-      return self.on(...)
-    end,
-    __index = onEvent
-  }
-
-function onEvent:itemButton(event)
-  log("onEvent:on, event: " .. serpent.block(event))
-  self.element = event.element
-  self.player_index = element.player_index
-  self.GP = get_player_data(player_index)
+function Graphtool:removeGui(player_index)
+  local UI = self.ui[player_index]
+  if UI and UI.root and UI.root["Graphtool"] then
+    UI.root["Graphtool"].destroy()
+    UI.Guibuild:destroy()
+  end
 end
 
 local onEvent = {}
@@ -204,6 +195,16 @@ local function gui_layout()
     }
 end
 
+function Graphtool:GB_metatable()
+  if self.ui then
+    for player_index, UI in pairs(self.ui) do
+      if UI.Guibuild then
+        Guibuild.metatable(UI.Guibuild)
+      end
+    end
+  end
+end
+
 function Graphtool:createGui(player_index)
   local player = game.players[player_index]
   if not self.ui[player_index] then
@@ -219,9 +220,8 @@ function Graphtool:createGui(player_index)
   --UI.root = player.gui.left
   UI.root = mod_gui.get_frame_flow(player)
 
-  self.events = {}
-  gui_build.gui_elem_iter(gui_layout(), UI.root, self.events)
-  log("self.events : " .. serpent.block(self.events))
+  UI.Guibuild = Guibuild(UI.root)
+  UI.Guibuild(gui_layout())
 
   set_player_data(player_index, self)
 end
