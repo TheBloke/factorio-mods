@@ -1,11 +1,13 @@
-local Entity = require('__stdlib__/stdlib/entity/entity')
-local Event = require('__stdlib__/stdlib/event/event')
-
---local Logger = require '__stdlib__/stdlib/misc/logger'
---LOG = Logger.new('graphtool', 'main', 'true', {force_append=true})
-
-local Csv = require 'csv'
+--
+-- Includes
+--
+-- mod
 local Graphtool = require 'graphtool'
+local Csv       = require 'csv'
+local Defines      = require('defines')
+-- stdlib
+local Entity    = require('__stdlib__/stdlib/entity/entity')
+local Event     = require('__stdlib__/stdlib/event/event')
 
 local function onPlaceEntity(event)
   local entity = event.created_entity or event.entity
@@ -14,7 +16,7 @@ local function onPlaceEntity(event)
     return
   end
 
-  if entity.name == 'graphtool' then
+  if entity.name == Defines.mod_entity then
     if not global._GTs then global._GTs = {} end
     global._GTs[entity.unit_number] = Graphtool(entity)
   end
@@ -22,7 +24,7 @@ end
 
 local function onRemoveEntity(event)
   local eventEntity = event.entity
-  if eventEntity.name == 'graphtool' then
+  if eventEntity.name == Defines.mod_entity then
     global._GTs[eventEntity.unit_number]:destroy()
     global._GTs[eventEntity.unit_number] = nil
   end
@@ -37,7 +39,7 @@ local function onTick(event)
 end
 
 local function toggleGui(event, action)
-  if event.entity and event.entity.name == "graphtool" then
+  if event.entity and event.entity.name == Defines.mod_entity then
     local player_index = event.player_index
     local GT = global._GTs[event.entity.unit_number]
     if GT then
@@ -58,7 +60,7 @@ local function onLoad()
   if global._GTs then
     for _, GT in pairs(global._GTs) do
       Graphtool.metatable(GT) -- rebuild metatables for the Graphtool objects
-      GT:GTG_metatable()       -- rebuild metatables for the Guibuild object(s)
+      GT:Gui_metatable()       -- rebuild metatables for the Guibuild object(s)
       GT:removeAllGui()       -- remove any open GUIs, as their events can't work post-load. User(s) can just re-open them.
     end
   end

@@ -1,9 +1,16 @@
-local Entity = require('__stdlib__/stdlib/entity/entity')
-
-local GTGui = require('gui_build')
+--
+-- Includes
+--
+-- mod
+local Guibuild  = require('gui_build')
+local Guiconfig = require('gui_config')
+local Defines      = require('defines')
+-- stdlib
+local Entity    = require('__stdlib__/stdlib/entity/entity')
 
 local Graphtool =
   {
+    __index = Graphtool,
     _cache = {},
     __call = function(self, ...)
       return self.get(...)
@@ -14,6 +21,11 @@ local GT_meta =
   {
     __index = Graphtool
   }
+
+if Defines.debug then
+  debug_obj(Graphtool, "Graphtool")
+  debug_obj(GT_meta, "Graphtool", { "onTick" })
+end
 
 local colours =
   {
@@ -27,9 +39,13 @@ function Graphtool.metatable(GT)
   setmetatable(GT, GT_meta)
 end
 
-function Graphtool.get(...)
-  local entity = ...
-  return Graphtool._cache[entity] or Graphtool.new(entity)
+function Graphtool.get(entity)
+  if Graphtool._cache[entity] then
+    log("Graphtool.get : returning cached GT for entity.")
+    return Graphtool._cache[entity]
+  else
+    return Graphtool.new(entity)
+  end
 end
 
 function Graphtool.new(entity)
@@ -46,9 +62,9 @@ function Graphtool.new(entity)
   Graphtool._cache[entity.unit_number] = nil
 
   GT.entity = entity
-  GT.pole = entity.surface.create_entity{name="graphtool-hiddenpole",
-                                            position = {x = entity.position.x, y = entity.position.y},
-                                            force = entity.force}
+  GT.pole = entity.surface.create_entity{name=Defines.pole_entity,
+                                         position = {x = entity.position.x, y = entity.position.y},
+                                         force = entity.force}
   GT.stats = GT.pole.electric_network_statistics
 
   Graphtool.metatable(GT, GT_meta)
@@ -58,17 +74,15 @@ function Graphtool.new(entity)
 end
 
 function Graphtool:removeAllGui()
-  log("Graphtool:removeAllGui")
   if self.ui then
-    for player_index, GTG in pairs(self.ui) do
-      GTG:removeGui()
+    for player_index, Gui in pairs(self.ui) do
+      Gui:removeGui()
       --self.ui[player_index] = nil
     end
   end
 end
 
 function Graphtool:destroy()
-  log("Graphtool:destroy")
   self:removeAllGui()
   self.stats = nil
   self.pole.destroy()
@@ -78,42 +92,37 @@ end
 function Graphtool:onTick()
   for colour, wire in pairs(colours) do
     local network = self.entity.get_circuit_network(wire)
-    if network then
-      if network.signals then
-        for _, signal in ipairs(network.signals) do
-          self.stats.on_flow("graphtool-" .. colour .. "-" .. signal.signal.name, signal.count/60)
-          self.items[signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
-        end
+    if network and network.signals then
+      for _, signal in pairs(network.signals) do
+        self.stats.on_flow("graphtool-" .. colour .. "-" .. signal.signal.name, signal.count/60)
+        self.items[signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
       end
     end
   end
 end
 
-
 function Graphtool:createGui(player_index)
-  log("Graphtool:createGui")
   local player = game.players[player_index]
   local ui = self.ui[player_index]
   if self.ui[player_index] then
-    log("Graphtool:createGui -> self.ui[p_i] exists: " .. serpent.block(self.ui[player_index]))
     self.ui[player_index]:destroy()
   end
 
-  self.ui[player_index] = GTGui(player_index, self)
+  self.ui[player_index] = Guibuild(Guiconfig.gui_top(player_index), Guiconfig.gui_layout(),
+                                    player_index, self)
 end
 
 function Graphtool:removeGui(player_index)
-  log("Graphtool:removeGui")
   if self.ui[player_index] then
     self.ui[player_index]:removeGui()
     self.ui[player_index] = nil
   end
 end
 
-function Graphtool:GTG_metatable()
+function Graphtool:Gui_metatable()
   if self.ui then
-    for player_index, UI in pairs(self.ui) do
-      GTGui.metatable(UI)
+    for player_index, GUI in pairs(self.ui) do
+      Guibuild.metatable(GUI)
     end
   end
 end
