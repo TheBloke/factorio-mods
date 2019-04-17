@@ -10,21 +10,14 @@ local Entity    = require('__stdlib__/stdlib/entity/entity')
 
 local Graphtool =
   {
-    __index = Graphtool,
     _cache = {},
     __call = function(self, ...)
-      return self.get(...)
+      return self:get(...)
     end
   }
 
-local GT_meta =
-  {
-    __index = Graphtool
-  }
-
 if Defines.debug then
-  debug_obj(Graphtool, "Graphtool")
-  debug_obj(GT_meta, "Graphtool", { "onTick" })
+  debug_obj(Graphtool, "Graphtool", { "onTick" } )
 end
 
 local colours =
@@ -36,41 +29,34 @@ local colours =
 setmetatable(Graphtool, Graphtool)
 
 function Graphtool.metatable(GT)
-  setmetatable(GT, GT_meta)
+  setmetatable(GT, Graphtool)
 end
 
-function Graphtool.get(entity)
+function Graphtool:get(entity)
   if Graphtool._cache[entity] then
     log("Graphtool.get : returning cached GT for entity.")
     return Graphtool._cache[entity]
   else
-    return Graphtool.new(entity)
+    return self:new(entity)
   end
 end
 
-function Graphtool.new(entity)
-  local GT =
-    {
-      items = {},
-      ui = {},
-      config = {},
-      entity = nil,
-      pole = nil,
-      stats = nil
-    }
+function Graphtool:new(entity)
+  self.items  = {}
+  self.ui     = {}
+  self.config = {}
 
   Graphtool._cache[entity.unit_number] = nil
 
-  GT.entity = entity
-  GT.pole = entity.surface.create_entity{name=Defines.pole_entity,
+  self.entity = entity
+  self.pole   = entity.surface.create_entity{name=Defines.pole_entity,
                                          position = {x = entity.position.x, y = entity.position.y},
                                          force = entity.force}
-  GT.stats = GT.pole.electric_network_statistics
+  self.stats  = self.pole.electric_network_statistics
 
-  Graphtool.metatable(GT, GT_meta)
-  Graphtool._cache[entity.unit_number] = GT
+  Graphtool._cache[entity.unit_number] = self
 
-  return GT
+  return self
 end
 
 function Graphtool:removeAllGui()
@@ -109,7 +95,7 @@ function Graphtool:createGui(player_index)
   end
 
   self.ui[player_index] = Guibuild(Guiconfig.gui_top(player_index), Guiconfig.gui_layout(),
-                                    player_index, self)
+                                   player_index, self, Guiconfig.gui_event_handler)
 end
 
 function Graphtool:removeGui(player_index)
@@ -121,8 +107,8 @@ end
 
 function Graphtool:Gui_metatable()
   if self.ui then
-    for player_index, GUI in pairs(self.ui) do
-      Guibuild.metatable(GUI)
+    for player_index, Gui in pairs(self.ui) do
+      Guibuild.metatable(Gui)
     end
   end
 end

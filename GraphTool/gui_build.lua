@@ -54,9 +54,10 @@ function Guibuild.metatable(Gui)
   end
 end
 
-function Guibuild.new(gui_top, layout, player_index, caller)
+function Guibuild.new(gui_top, layout, player_index, caller, handler)
   local Gui =
   {
+    handler = handler,
     Caller = caller,
     events = {},
     elements = {},
@@ -94,21 +95,15 @@ function Guibuild:register_event(event_table)
   table.insert(self.events, event_table)
 end
 
-function Guibuild:elem_callback(elem)
-  local callback = elem.callback
-  if callback and Is.Callable(callback) then
-    local target = elem.target or nil
-    -- if elem.target then
-    --   target = self.elements[elem.target]
-    -- end
-    local handler = function(event)
-      return callback(event, self, target)
-    end
-    local event_table = {evs.on_gui_click, handler, eventmatcher, elem.name}
+function Guibuild:elem_event(elem)
+  local event = elem.event
+  if Is.Table(event)  then
+    local target = event.target or nil
+    local handler_func = self.handler(event, self, target)
+    local event_table = {event.event_id, handler_func, eventmatcher, elem.name}
     self:register_event(event_table)
   end
-  elem.callback = nil
-  elem.target = nil
+  elem.event = nil
 end
 
 function Guibuild:elem_add(elem, root)
@@ -120,8 +115,8 @@ end
 function Guibuild:element(elem, root)
   if elem then
     local newroot
-    if elem.callback then
-      self:elem_callback(elem)
+    if elem.event then
+      self:elem_event(elem)
     end
     if elem.style then
       local style = table.deep_copy(elem.style)
@@ -133,9 +128,6 @@ function Guibuild:element(elem, root)
     else
       newroot = self:elem_add(elem, root)
     end
-    -- if not self.ui_top then -- Mark the top level element to facilitate removeGui
-    --   self.ui_top = newroot
-    -- end
     return newroot
   end
 end
