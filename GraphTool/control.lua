@@ -4,7 +4,7 @@
 -- mod
 local Graphtool = require 'graphtool'
 local Csv       = require 'csv'
-local Defines      = require('defines')
+local Defines   = require('defines')
 -- stdlib
 local Entity    = require('__stdlib__/stdlib/entity/entity')
 local Event     = require('__stdlib__/stdlib/event/event')
@@ -67,21 +67,10 @@ local function onLoad()
 end
 
 local evs = defines.events
---[[
-script.on_event({evs.on_built_entity,evs.on_robot_built_entity}, onPlaceEntity)
-script.on_event({evs.on_entity_died, evs.on_pre_player_mined_item, evs.robot_pre_mined, evs.script_raised_destroy}, onRemoveEntity)
-script.on_event(evs.on_tick, onTick)
-script.on_event(evs.on_gui_opened, function(e) toggleGui(e, "open") end)
-script.on_event(evs.on_gui_closed, function(e) toggleGui(e, "close") end)
-script.on_event(evs.on_gui_value_changed, guiValue)
-script.on_load(onLoad)
---]]
 
-----[[
 Event.register({evs.on_built_entity,evs.on_robot_built_entity}, onPlaceEntity)
 Event.register({evs.on_entity_died, evs.on_pre_player_mined_item, evs.robot_pre_mined, evs.script_raised_destroy}, onRemoveEntity)
 Event.register(evs.on_tick, onTick)
 Event.register(evs.on_gui_opened, function(e) toggleGui(e, "open") end)
 Event.register(evs.on_gui_closed, function(e) toggleGui(e, "close") end)
 Event.on_load(onLoad)
---]]

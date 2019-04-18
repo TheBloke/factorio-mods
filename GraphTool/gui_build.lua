@@ -4,78 +4,52 @@
 -- mod
 local Defines  = require('defines')
 -- stdlib
-local table = require('__stdlib__/stdlib/utils/table')
-local Is    = require('__stdlib__/stdlib/utils/is')
-local Event = require('__stdlib__/stdlib/event/event')
-
-local evs = defines.events
-
-local function get_player_data(player_index)
-  if global.player_data == nil then
-    global.player_data = {}
-  end
-  local player_data = global.player_data[player_index] or {}
-  return player_data
-end
-
-local function set_player_data(player_index, data)
-  if global.player_data == nil then
-    global.player_data = {}
-  end
-  global.player_data[player_index] = data
-end
+local table    = require('__stdlib__/stdlib/utils/table')
+local Is       = require('__stdlib__/stdlib/utils/is')
+local Event    = require('__stdlib__/stdlib/event/event')
 
 local Guibuild =
   {
-    _cache = {},
     __call = function(self, ...)
       return self.new(...)
     end
   }
 
-local Gui_meta =
+local Guibuild_meta =
   {
     __index = Guibuild
   }
 
-if Defines.debug then
-  debug_obj(Gui_meta, "Guibuild")
-end
+setmetatable(Guibuild, Guibuild)
 
-function Guibuild.get(gui_top, layout, player_index, self)
-  -- TODO cache can't work because there can be multiple Guibuilds per player (multiple entities)?
-  --return Guibuild._cache[player_index] or Guibuild.new(player_index, GT)
-  return Guibuild.new(gui_top, layout, player_index)
-end
+-- if Defines.debug then
+--   debug_obj(Guibuild, "Guibuild")
+-- end
 
 function Guibuild.metatable(Gui)
-  if Gui then
-    setmetatable(Gui, Gui_meta)
+  if Is.Table(Gui) then
+    setmetatable(Gui, Guibuild_meta)
   end
 end
 
 function Guibuild.new(gui_top, layout, player_index, caller, handler)
+  log("Guibuild.new")
   local Gui =
-  {
-    handler = handler,
-    Caller = caller,
-    events = {},
-    elements = {},
-    player_index = player_index,
-    ui_top = nil
-  }
+    {
+      handler      = handler,
+      Caller       = caller,
+      events       = {},
+      elements     = {},
+      player_index = player_index,
+      ui_top       = gui_top
+    }
 
   Guibuild.metatable(Gui)
-  Guibuild._cache[player_index] = player_index
 
-  Gui.ui_top = gui_top
   Gui:build(layout)
 
-  set_player_data(player_index, Gui)
   return Gui
 end
-
-setmetatable(Guibuild, Guibuild)
 
 local function eventmatcher(event, pattern)
   -- Copied from stdlib/stdlib/event/gui
@@ -150,6 +124,7 @@ function Guibuild:build(layout, root)
 end
 
 function Guibuild:removeGui()
+  log("Guibuild:removeGui")
   if self.ui_top then
     if self.events then
       for _, event in pairs(self.events) do

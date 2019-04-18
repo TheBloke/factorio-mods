@@ -6,23 +6,19 @@ require 'mod-gui'
 
 local evs = defines.events
 
-local Guiconfig = {}
-
-local onEvent =
+local Guiconfig =
   {
-    __index = function(_, k)
-      if doEvent[k] then
-        return function(event, Gui, target)
-          local element = event.element
-          local player_index = element.player_index
-          target = Gui.elements[target] or target
-          return doEvent[k](element, Gui, player_index, target)
-        end
-       end
+    __call = function(self, ...)
+      return self.new(...)
     end
   }
 
---setmetatable(onEvent, onEvent)
+local Guiconfig_meta =
+  {
+    __index = Guiconfig
+  }
+
+setmetatable(Guiconfig, Guiconfig)
 
 local doEvent = {}
 
@@ -69,6 +65,21 @@ function doEvent.radioOnOff(element, Gui, player_index, target)
   end
 end
 
+function Guiconfig.metatable(GC)
+  setmetatable(GC, Guiconfig_meta)
+end
+
+function Guiconfig.new(player_index)
+  local GC =
+  {
+    player_index = player_index
+  }
+
+  Guiconfig.metatable(GC)
+
+  return GC
+end
+
 function Guiconfig.gui_event_handler(event, Gui, target)
   local handler_function = function(evnt)
     local element = evnt.element
@@ -79,8 +90,8 @@ function Guiconfig.gui_event_handler(event, Gui, target)
   return handler_function
 end
 
-function Guiconfig.gui_top(player_index)
-  local player = game.players[player_index]
+function Guiconfig:gui_top()
+  local player = game.players[self.player_index]
   return mod_gui.get_frame_flow(player)
 end
 
