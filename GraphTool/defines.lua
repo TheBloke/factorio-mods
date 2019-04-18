@@ -1,9 +1,13 @@
 Defines =
   {
-    modname = "GraphTool",
-    mod_entity = "graphtool",
-    pole_entity = "graphtool-hiddenpole",
-    debug = true
+    modname          = "GraphTool",
+    mod_entity       = "graphtool",
+    pole_entity      = "graphtool-hiddenpole",
+    default_ticks    = 1,
+    default_separate = false,
+    default_enabled  = true,
+    max_ticks        = 120,
+    debug            = true
   }
 
 function debug_obj (obj, name, exclusions)

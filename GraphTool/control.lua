@@ -30,11 +30,13 @@ local function onRemoveEntity(event)
   end
 end
 
-local function onTick(event)
+local function onTick()
   if not global._GTs then return end
 
   for _, GT in pairs(global._GTs) do
-    GT:onTick()
+    if GT.config.enabled then
+      GT:onTick()
+    end
   end
 end
 

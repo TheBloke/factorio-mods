@@ -21,6 +21,13 @@ local Graphtool_meta =
     __index = Graphtool
   }
 
+local config_default =
+  {
+    enabled  = Defines.default_enabled,
+    ticks    = Defines.default_ticks,
+    separate = Defines.default_separate
+  }
+
 setmetatable(Graphtool, Graphtool)
 
 -- if Defines.debug then
@@ -43,9 +50,9 @@ function Graphtool.new(entity)
   log("Graphtool:new()")
   local GT =
     {
-      items  = {},
+      items  = { red = {}, green = {}, merged = {} },
       ui     = {},
-      config = {},
+      config = config_default,
       entity = nil,
       pole   = nil
     }
@@ -75,16 +82,45 @@ function Graphtool:destroy()
   self:removeAllGui()
   self.stats = nil
   self.pole.destroy()
-  self = nil
 end
 
 function Graphtool:onTick()
-  for colour, wire in pairs(colours) do
-    local network = self.entity.get_circuit_network(wire)
-    if network and network.signals then
-      for _, signal in pairs(network.signals) do
-        self.stats.on_flow("graphtool-" .. colour .. "-" .. signal.signal.name, signal.count/60)
-        self.items[signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
+  if self.config.ticks == 1 or game.tick % self.config.ticks == 0 then
+    -- Read the signal network every config.ticks (defaults to 1)
+    if self.config.separate then
+      for colour, wire in pairs(colours) do
+        local network = self.entity.get_circuit_network(wire)
+        if network and network.signals then
+          for _, signal in pairs(network.signals) do
+            local signal_name = "graphtool-" .. colour .. "-" .. signal.signal.name
+            local signal_count = signal.count/60
+            self.stats.on_flow(signal_name, signal_count)
+            self.items[colour][signal_name] = signal_count
+            --self.items[colour][signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
+          end
+        end
+      end
+    else -- Merged signals
+      local signals = self.entity.get_merged_signals()
+      if signals then
+        for _, signal in pairs(signals) do
+          local signal_name = "graphtool-" .. signal.signal.name
+          local signal_count = signal.count/60
+          self.stats.on_flow(signal_name, signal_count)
+          self.items["merged"][signal_name] = signal_count
+        end
+      end
+    end
+  else -- If not reading this tick, re-send the last stored value.
+    if self.config.separate then
+      for _, colour in pairs{"red", "green"} do
+        for signal_name, signal_count in pairs(self.items[colour]) do
+          self.stats.on_flow(signal_name, signal_count)
+        end
+      end
+    else -- Merged signals
+      for signal_name, signal_count in pairs(self.items["merged"]) do
+        self.stats.on_flow(signal_name, signal_count)
       end
     end
   end
@@ -92,15 +128,12 @@ end
 
 function Graphtool:createGui(player_index)
   log("Graphtool:createGui()")
-  local player = game.players[player_index]
-  local ui = self.ui[player_index]
   if self.ui[player_index] then
     self.ui[player_index]:destroy()
   end
 
   local GC = Guiconfig(player_index)
-  self.ui[player_index] = Guibuild(GC:gui_top(), GC.gui_layout(),
-                                   player_index, self, GC.gui_event_handler)
+  self.ui[player_index] = Guibuild(GC, self)
 end
 
 function Graphtool:removeGui(player_index)

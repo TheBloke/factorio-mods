@@ -32,21 +32,22 @@ function Guibuild.metatable(Gui)
   end
 end
 
-function Guibuild.new(gui_top, layout, player_index, caller, handler)
+function Guibuild.new(Guiconfig, caller)
   log("Guibuild.new")
   local Gui =
     {
-      handler      = handler,
       Caller       = caller,
+      handler      = Guiconfig.gui_event_handler,
+      player_index = Guiconfig.player_index,
+      ui_top       = Guiconfig:gui_top(),
       events       = {},
-      elements     = {},
-      player_index = player_index,
-      ui_top       = gui_top
+      elements     = {}
     }
 
   Guibuild.metatable(Gui)
 
-  Gui:build(layout)
+  log(serpent.block(Guiconfig.gui_layout()))
+  Gui:build(Guiconfig.gui_layout())
 
   return Gui
 end
@@ -69,15 +70,30 @@ function Guibuild:register_event(event_table)
   table.insert(self.events, event_table)
 end
 
-function Guibuild:elem_event(elem)
-  local event = elem.event
+function Guibuild:elem_event(event, elem)
   if Is.Table(event)  then
     local target = event.target or nil
-    local handler_func = self.handler(event, self, target)
+    local handler_func
+    if self.handler then
+      handler_func = self.handler(event, self, target)
+    else
+      handler_func = function() return event.func(elem, self, self.player_index, target) end
+    end
     local event_table = {event.event_id, handler_func, eventmatcher, elem.name}
     self:register_event(event_table)
   end
-  elem.event = nil
+end
+
+function Guibuild:elem_events(elem)
+  if elem.events then
+    for _, event in pairs(elem.events) do
+      self:elem_event(event, elem)
+    end
+    elem.events = nil
+  elseif elem.event then
+    self:elem_event(elem.event, elem)
+    elem.event = nil
+  end
 end
 
 function Guibuild:elem_add(elem, root)
@@ -86,11 +102,26 @@ function Guibuild:elem_add(elem, root)
   return newroot
 end
 
+function Guibuild:elem_default(elem)
+  -- elem.default can reference a function which specifies a default value for this element
+  -- The function's return value should be a table including one or more LuaGuiElement.add attributes
+  -- eg: { text = 1 } or { value = 15 }
+  if Is.Callable(elem.default) then
+    local default_func = elem.default
+    local default_table = default_func(elem.name, self.Caller)
+    table.merge(elem, default_table)
+  end
+  elem.default = nil
+end
+
 function Guibuild:element(elem, root)
   if elem then
     local newroot
-    if elem.event then
-      self:elem_event(elem)
+    if elem.events or elem.event then
+      self:elem_events(elem)
+    end
+    if elem.default then
+      self:elem_default(elem)
     end
     if elem.style then
       local style = table.deep_copy(elem.style)
