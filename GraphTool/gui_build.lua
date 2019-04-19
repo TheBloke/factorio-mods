@@ -46,7 +46,8 @@ function Guibuild.new(Guiconfig, caller)
 
   Guibuild.metatable(Gui)
 
-  log(serpent.block(Guiconfig.gui_layout()))
+  log("gui_layout:")
+  --log(serpent.block(Guiconfig.gui_layout()))
   Gui:build(Guiconfig.gui_layout())
 
   return Gui
@@ -123,7 +124,7 @@ function Guibuild:element(elem, root)
     if elem.default then
       self:elem_default(elem)
     end
-    if elem.style then
+    if elem.style and Is.Table(elem.style) then
       local style = table.deep_copy(elem.style)
       elem.style = nil
       newroot = self:elem_add(elem, root)
@@ -147,6 +148,11 @@ function Guibuild:build(layout, root)
         elem.children = nil
         newroot = self:element(elem, root)
         self:build(child, newroot)
+      elseif not elem.type then
+        --table of elements, not element
+        for _, t in pairs(elem) do
+          self:build({t}, root)
+        end
       else
         newroot = self:element(elem, root)
       end
@@ -162,7 +168,7 @@ function Guibuild:removeGui()
         Event.remove(table.unpack(event))
       end
     end
-    self.ui_top.destroy()
+    self.ui_top.clear()
   end
 end
 

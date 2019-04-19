@@ -21,12 +21,15 @@ local Graphtool_meta =
     __index = Graphtool
   }
 
-local config_default =
-  {
-    enabled  = Defines.default_enabled,
-    ticks    = Defines.default_ticks,
-    separate = Defines.default_separate
-  }
+local function config_default()
+  return
+    {
+      enabled   = Defines.default_enabled,
+      ticks     = Defines.default_ticks,
+      separate  = Defines.default_separate,
+      allow_neg = Defines.default_allow_neg
+    }
+end
 
 setmetatable(Graphtool, Graphtool)
 
@@ -46,13 +49,17 @@ function Graphtool.metatable(GT)
   end
 end
 
+local function items_default()
+  return { red = {}, green = {}, merged = {} }
+end
+
 function Graphtool.new(entity)
   log("Graphtool:new()")
   local GT =
     {
-      items  = { red = {}, green = {}, merged = {} },
+      items  = items_default(),
       ui     = {},
-      config = config_default,
+      config = config_default(),
       entity = nil,
       pole   = nil
     }
@@ -84,42 +91,44 @@ function Graphtool:destroy()
   self.pole.destroy()
 end
 
+function Graphtool:process_signals(signals, store_key, entity_prefix)
+  for _, signal in pairs(signals) do
+    local signal_name = entity_prefix .. "-" .. signal.signal.name
+    local signal_count = signal.count/60
+    if signal_count < 0 and not self.config.allow_neg then
+      signal_count = 0
+    end
+    self.stats.on_flow(signal_name, signal_count)
+    if self.config.ticks > 1 then
+      self.items[store_key][signal_name] = signal_count
+    end
+    --self.items[colour][signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
+  end
+end
+
 function Graphtool:onTick()
   if self.config.ticks == 1 or game.tick % self.config.ticks == 0 then
     -- Read the signal network every config.ticks (defaults to 1)
+    if self.config.ticks > 1 then
+      self.items = items_default()  -- Wipe all stored values
+    end
     if self.config.separate then
       for colour, wire in pairs(colours) do
         local network = self.entity.get_circuit_network(wire)
         if network and network.signals then
-          for _, signal in pairs(network.signals) do
-            local signal_name = "graphtool-" .. colour .. "-" .. signal.signal.name
-            local signal_count = signal.count/60
-            self.stats.on_flow(signal_name, signal_count)
-            self.items[colour][signal_name] = signal_count
-            --self.items[colour][signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
-          end
+          self:process_signals(network.signals, colour, "graphtool-" .. colour)
         end
       end
     else -- Merged signals
       local signals = self.entity.get_merged_signals()
       if signals then
-        for _, signal in pairs(signals) do
-          local signal_name = "graphtool-" .. signal.signal.name
-          local signal_count = signal.count/60
-          self.stats.on_flow(signal_name, signal_count)
-          self.items["merged"][signal_name] = signal_count
-        end
+        self:process_signals(signals, "merged", "graphtool")
       end
     end
-  else -- If not reading this tick, re-send the last stored value.
-    if self.config.separate then
-      for _, colour in pairs{"red", "green"} do
-        for signal_name, signal_count in pairs(self.items[colour]) do
-          self.stats.on_flow(signal_name, signal_count)
-        end
-      end
-    else -- Merged signals
-      for signal_name, signal_count in pairs(self.items["merged"]) do
+  else -- If not reading this tick, re-send stored signals.
+    stored_list = self.config.separate and {"red", "green"} or {"merged"}
+    for _, stored_type in pairs(stored_list) do
+      for signal_name, signal_count in pairs(self.items[stored_type]) do
         self.stats.on_flow(signal_name, signal_count)
       end
     end
