@@ -55,15 +55,15 @@ end
 
 local function eventmatcher(event, pattern)
   -- Copied from stdlib/stdlib/event/gui
-    if event.element and event.element.valid then
-        local match_str = event.element.name:match(pattern)
-        if match_str then
-            event.match = match_str
-            event.state = event.name == defines.events.on_gui_checked_state_changed and event.element.state or nil
-            event.text = event.name == defines.events.on_gui_text_changed and event.element.text or nil
-            return match_str
-        end
+  if event.element and event.element.valid then
+    local match_str = event.element.name:match(pattern)
+    if match_str then
+      event.match = match_str
+      event.state = event.name == defines.events.on_gui_checked_state_changed and event.element.state or nil
+      event.text = event.name == defines.events.on_gui_text_changed and event.element.text or nil
+      return match_str
     end
+  end
 end
 
 function Guibuild:register_event(event_table)
@@ -129,7 +129,14 @@ function Guibuild:element(elem, root)
       elem.style = nil
       newroot = self:elem_add(elem, root)
       for k, v in pairs(style) do
-        newroot.style[k] = v
+        if k == "column_alignments" then
+          for n, m in ipairs(v) do
+            newroot.style.column_alignments[n] = m
+          end
+          break
+        else
+          newroot.style[k] = v
+        end
       end
     else
       newroot = self:elem_add(elem, root)

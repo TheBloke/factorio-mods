@@ -110,14 +110,14 @@ function defaults.Ticks(name, Graphtool)
   return default
 end
 
-local function info_button(name, label_name)
+local function info_button(name, tooltip)
   return
-    { type = "sprite-button", sprite = "info", name = name, style = "GT_info_button", tooltip = {"tooltip." .. label_name} }
+    { type = "sprite-button",  name = name, style = "GT_info_button", tooltip = tooltip }
 end
 
-local function radiobutton_pair(name, caption, on_state_name, off_state_name, config_name, event_func, default_func)
+local function radiobutton_pair(name, caption, on_state_name, off_state_name, config_name, tooltip_text, event_func, default_func)
   local element_table = {}
-  local element_label = { type = "label", name = name, caption = { "label." .. caption}, style = {horizontal_align = "right"} }
+  local element_label = { type = "label", name = name, caption = caption, style = {horizontal_align = "right"} }
 
   local on_element_name = "radio" .. name .. on_state_name
   local event_function = event_func or function (element, Gui, player_index, target)
@@ -153,7 +153,8 @@ local function radiobutton_pair(name, caption, on_state_name, off_state_name, co
       }
   end
   table.insert(element_table, element_label)
-  table.insert(element_table, info_button("radioButtonTooltip" .. config_name, config_name))
+  local tooltip = tooltip_text or {"tooltip." .. config_name}
+  table.insert(element_table, info_button("radioButtonTooltip" .. config_name, tooltip))
   table.insert(element_table, element(on_state_name, off_state_name))
   table.insert(element_table, element(off_state_name, on_state_name))
   return element_table
@@ -167,28 +168,22 @@ function Guiconfig.gui_layout()
           { type = "frame",                     name = "frameConfigHeader", caption = {"label.configuration"}, direction = "vertical", children =
             {
               { type = "flow",                  name = "flowConfig", direction = "vertical",
-                                                style = { bottom_margin = 20, top_margin = 20, left_margin = 20, right_margin = 20 },
+                                                style = { bottom_margin = 10, top_margin = 10, left_margin = 10, right_margin = 10 },
                                                 children =
                 {
                   { type = "table",             name = "tableConfigRadio", column_count = 4, direction = "horizontal", children =
                     {
-                      radiobutton_pair("Graphing", "enabled", "On", "Off", "enabled"),
-                      radiobutton_pair("Separate", "separate", "Yes", "No", "separate"),
-                      radiobutton_pair("AllowNeg", "allow_neg", "Yes", "No", "allow_neg"),
+                      radiobutton_pair("Graphing", {"label.enabled"}, "On", "Off", "enabled", {"tooltip.enabled", {"label.graphtool"}}),
+                      radiobutton_pair("Separate", {"label.separate"}, "Yes", "No", "separate", {"tooltip.separate", {"label.Yes"}, {"label.No"}}),
+                      radiobutton_pair("AllowNeg", {"label.allow_neg"}, "Yes", "No", "allow_neg",
+                                      {"tooltip.allow_neg", {"label.Yes"}, {"label.No"}, {"gui-electric-network.production"}, {"gui-electric-network.title"} }),
                       { type = "label",     name  = "labelTicks", caption = {"label.ticks"},
-                                            style = { height = 30, horizontal_align = "left", vertical_align = "center" } },
-                      info_button("buttonTicksInfo", "ticks_info")
-                      -- { type = "sprite-button", name  = "buttonTicksInfo",
-                      --                           sprite = "info", style = "GT_info_button",
-                      --                           tooltip = {"tooltip.ticks_info"} }
-                    }, style = { horizontal_align = "right"}
+                                            style = { height = 30, vertical_align = "center" } },
+                      info_button("buttonTicksInfo", {"tooltip.ticks_info", {"label.graphtool"}})
+                    }, style = { horizontal_spacing = 10, horizontally_stretchable = true, column_alignments = { [1] = "middle-left", [2] = "middle-left", [3] = "right", [4] = "right" } }
                   },
                   { type = "flow",              name  = "flowConfigTicks", direction="vertical", children =
                     {
-                      { type = "flow",          name  = "flowConfigTicksLabel",  direction="horizontal", children =
-                        {
-                        }
-                      },
                       { type = "flow",          name  = "flowConfigTicksControls", direction="horizontal",
                                                 style = { horizontal_align = "right", horizontally_stretchable = true },
                                                 children =

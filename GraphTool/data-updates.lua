@@ -84,24 +84,24 @@ local info_button_graphical_set =
 {
     filename = "__core__/graphics/icons/info-blue.png",
     priority = "extra-high-no-scale",
-    --left_top =  { position = {0,25}, width = 16, height = 15 },
-    --right_bottom = { position= {16,10} },
-    position = {0, 0},
-    flags = {'no-crop', 'icon'},
-    width = 16,
-    height = 15,
-    border = 0,
-    scale = 1
+    position = {0, 15},
+    flags    = {'no-crop', 'icon'},
+    width    = 16,
+    height   = 16,
+    border   = 0
 }
 
 data.raw["gui-style"].default["GT_info_button"] = {
-    type = "button_style",
-    parent = "button",
+    type                  = "button_style",
+    parent                = "button",
     default_graphical_set = info_button_graphical_set,
     hovered_graphical_set = info_button_graphical_set,
     clicked_graphical_set = info_button_graphical_set,
-    height = 30,
-    minimal_width = 32,
-    left_padding = 0,
-    right_padding = 0
+    height                = 10,
+    minimal_width         = 10,
+    top_padding           = 0,
+    bottom_padding        = 0,
+    left_padding          = 0,
+    right_padding         = 0,
+    left_click_sound      = {}
 }

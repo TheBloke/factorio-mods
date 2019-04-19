@@ -89,17 +89,19 @@ function Graphtool:destroy()
   self:removeAllGui()
   self.stats = nil
   self.pole.destroy()
+  self.pole = nil
 end
 
 function Graphtool:process_signals(signals, store_key, entity_prefix)
   for _, signal in pairs(signals) do
-    local signal_name = entity_prefix .. "-" .. signal.signal.name
     local signal_count = signal.count/60
     if signal_count < 0 and not self.config.allow_neg then
-      signal_count = 0
+      -- If value is negative and config.allow_neg is not set, ignore this signal.
+      break
     end
+    local signal_name = entity_prefix .. "-" .. signal.signal.name
     self.stats.on_flow(signal_name, signal_count)
-    if self.config.ticks > 1 then
+    if self.config.ticks > 1 then -- If we're not reading the network every tick, cache values
       self.items[store_key][signal_name] = signal_count
     end
     --self.items[colour][signal.signal.name] = {item_type = signal.signal.type, item_count=signal.count}
@@ -143,6 +145,7 @@ function Graphtool:createGui(player_index)
 
   local GC = Guiconfig(player_index)
   self.ui[player_index] = Guibuild(GC, self)
+  --self.ui[player_index].ui_top["Graphtool"]["frameConfigHeader"]["flowConfig"]["tableConfigRadio"].style.column_alignments[1] = "right"
 end
 
 function Graphtool:removeGui(player_index)
