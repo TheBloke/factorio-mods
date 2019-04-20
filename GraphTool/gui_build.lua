@@ -34,6 +34,8 @@ end
 
 function Guibuild.new(Guiconfig, caller)
   log("Guibuild.new")
+  log("Guibuild.new, Guiconfig:" .. serpent.block(Guiconfig))
+  log("Guibuild.new, Guiconfig.player_index:" .. serpent.block(Guiconfig.player_index))
   local Gui =
     {
       Caller       = caller,
@@ -48,7 +50,7 @@ function Guibuild.new(Guiconfig, caller)
 
   log("gui_layout:")
   --log(serpent.block(Guiconfig.gui_layout()))
-  Gui:build(Guiconfig.gui_layout())
+  Gui:build(Guiconfig.gui_layout(Guiconfig.player_index))
 
   return Gui
 end
@@ -109,7 +111,7 @@ function Guibuild:elem_default(elem)
   -- eg: { text = 1 } or { value = 15 }
   if Is.Callable(elem.default) then
     local default_func = elem.default
-    local default_table = default_func(elem.name, self.Caller)
+    local default_table = default_func(self.player_index, elem.name, self.Caller)
     table.merge(elem, default_table)
   end
   elem.default = nil
@@ -118,6 +120,7 @@ end
 function Guibuild:element(elem, root)
   if elem then
     local newroot
+    elem.name = self.player_index .. "_" .. elem.name
     if elem.events or elem.event then
       self:elem_events(elem)
     end
@@ -125,6 +128,7 @@ function Guibuild:element(elem, root)
       self:elem_default(elem)
     end
     if elem.style and Is.Table(elem.style) then
+      -- Process a table of styles to be added to the element, as elem.style = { x = y }
       local style = table.deep_copy(elem.style)
       elem.style = nil
       newroot = self:elem_add(elem, root)
@@ -156,7 +160,7 @@ function Guibuild:build(layout, root)
         newroot = self:element(elem, root)
         self:build(child, newroot)
       elseif not elem.type then
-        --table of elements, not element
+        --not an element, so it's a table of multiple elements
         for _, t in pairs(elem) do
           self:build({t}, root)
         end

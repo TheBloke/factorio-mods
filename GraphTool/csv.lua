@@ -2,39 +2,37 @@
 
 local Csv =
   {
-    _csvs = {},
     __call = function(self, ...)
-      return self.get(...)
+      return self.new(...)
     end,
-    __index = Csv
   }
 setmetatable(Csv, Csv)
 
-function Csv.get(...)
-  local filename = ...
-  return Csv._csvs[filename] or Csv.new(...)
+local Csv_meta =
+  {
+    __index = Csv
+  }
+
+function Csv.metatable(CSV)
+  if CSV then
+    setmetatable(CSV, Csv_meta)
+  end
 end
 
-function Csv.new(filename)
-  Csv._csvs[filename] = nil
-  local CsvFile =
+function Csv.new(filename, separator)
+  local CSV =
     {
+      separator = separator or ",",
       filename = filename
     }
 
-  function CsvFile.log(item, count)
-    game.write_file(CsvFile.filename, item .. "," .. count, true)
-  end
+  return CSV
+end
 
-  Csv._csvs[filename] = CsvFile
-  return CsvFile
+function Csv:write(items)
+  for item, count in pairs(items) do
+    game.write_file(self.filename, item .. self.separator .. count, true)
+  end
 end
 
 return Csv
-
---[[
-function Csv.init(entity, state)
-  state.filename = ""
-  Entity.set_data(entity, state)
-end
-]]

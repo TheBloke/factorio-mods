@@ -2,9 +2,10 @@
 -- Includes
 --
 -- mod
+local Defines   = require('defines')
 local Guibuild  = require('gui_build')
 local Guiconfig = require('gui_config')
-local Defines   = require('defines')
+local Csv       = require('csv')
 -- stdlib
 local Entity    = require('__stdlib__/stdlib/entity/entity')
 local Is        = require('__stdlib__/stdlib/utils/is')
@@ -112,7 +113,7 @@ function Graphtool:onTick()
   if self.config.ticks == 1 or game.tick % self.config.ticks == 0 then
     -- Read the signal network every config.ticks (defaults to 1)
     if self.config.ticks > 1 then
-      self.items = items_default()  -- Wipe all stored values
+      self.items = items_default()  -- Wipe all stored values, ready for next read.
     end
     if self.config.separate then
       for colour, wire in pairs(colours) do
@@ -139,11 +140,13 @@ end
 
 function Graphtool:createGui(player_index)
   log("Graphtool:createGui()")
+  log("Graphtool:createGui(), player_index: " .. player_index)
   if self.ui[player_index] then
     self.ui[player_index]:destroy()
   end
 
   local GC = Guiconfig(player_index)
+  log("createGui, GC.player_index: " .. GC.player_index)
   self.ui[player_index] = Guibuild(GC, self)
   --self.ui[player_index].ui_top["Graphtool"]["frameConfigHeader"]["flowConfig"]["tableConfigRadio"].style.column_alignments[1] = "right"
 end
