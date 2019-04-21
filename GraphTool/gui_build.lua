@@ -1,6 +1,3 @@
---
--- Includes
---
 -- mod
 local Defines  = require('defines')
 -- stdlib
@@ -22,10 +19,6 @@ local Guibuild_meta =
 
 setmetatable(Guibuild, Guibuild)
 
--- if Defines.debug then
---   debug_obj(Guibuild, "Guibuild")
--- end
-
 function Guibuild.metatable(Gui)
   if Is.Table(Gui) then
     setmetatable(Gui, Guibuild_meta)
@@ -46,22 +39,37 @@ function Guibuild.new(Guiconfig, caller)
 
   Guibuild.metatable(Gui)
 
-  log("gui_layout:")
-  --log(serpent.block(Guiconfig.gui_layout()))
+  --log("gui_layout:" .. serpent.block(Guiconfig.gui_layout()))
   Gui:build(Guiconfig.gui_layout())
 
   return Gui
 end
 
-local function eventmatcher(event, pattern)
-  -- Copied from stdlib/stdlib/event/gui
-  if event.element and event.element.valid then
-    local match_str = event.element.name:match(pattern)
-    if match_str then
-      event.match = match_str
-      event.state = event.name == defines.events.on_gui_checked_state_changed and event.element.state or nil
-      event.text = event.name == defines.events.on_gui_text_changed and event.element.text or nil
-      return match_str
+function Guibuild:removeGui()
+  log("Guibuild:removeGui")
+  if self.ui_top then
+    if self.events then
+      for _, event in pairs(self.events) do
+        Event.remove(table.unpack(event))
+      end
+    end
+    self.ui_top.clear()
+  end
+end
+
+local function get_eventmatcher(player_index)
+  return function (event, pattern)
+    -- Copied from stdlib/stdlib/event/gui
+    if event.element and event.element.valid then
+      if event.player_index == player_index then
+        local match_str = event.element.name:match(pattern)
+        if match_str then
+          event.match = match_str
+          event.state = event.name == defines.events.on_gui_checked_state_changed and event.element.state or nil
+          event.text  = event.name == defines.events.on_gui_text_changed and event.element.text or nil
+          return match_str
+        end
+      end
     end
   end
 end
@@ -72,15 +80,15 @@ function Guibuild:register_event(event_table)
 end
 
 function Guibuild:elem_event(event, elem)
-  if Is.Table(event)  then
+  if Is.Table(event) then
     local target = event.target or nil
     local handler_func
     if self.handler then
       handler_func = self.handler(event, self, target)
     else
-      handler_func = function() return event.func(elem, self, self.player_index, target) end
+      handler_func = function(evnt) return event.func(elem, self, self.player_index, target) end
     end
-    local event_table = {event.event_id, handler_func, eventmatcher, elem.name}
+    local event_table = {event.event_id, handler_func, get_eventmatcher(self.player_index), elem.name}
     self:register_event(event_table)
   end
 end
@@ -115,6 +123,28 @@ function Guibuild:elem_default(elem)
   elem.default = nil
 end
 
+function Guibuild:elem_refresh(elem)
+  log("elem_refresh")
+  if Is.Callable(elem.refresh) then
+    log("elem_refresh in if")
+    local refresh_func = elem.refresh
+    local event_name = "refresh" .. elem.name
+    local custom_event_id = Event.generate_event_name(event_name)
+    if not self.Caller.ui_events[self.player_index] then
+      self.Caller.ui_events[self.player_index] = {}
+    end
+    self.Caller.ui_events[self.player_index][event_name] = custom_event_id
+    Event.register(custom_event_id,
+                  function(event)
+                    local Gui = self
+                    refresh_func(event, Gui)
+                  end,
+                  nil,
+                  nil)
+  end
+  elem.refresh = nil
+end
+
 function Guibuild:element(elem, root)
   if elem then
     local newroot
@@ -124,7 +154,11 @@ function Guibuild:element(elem, root)
     if elem.default then
       self:elem_default(elem)
     end
+    if elem.refresh then
+      self:elem_refresh(elem)
+    end
     if elem.style and Is.Table(elem.style) then
+      -- Process a table of styles to be added to the element, as elem.style = { x = y }
       local style = table.deep_copy(elem.style)
       elem.style = nil
       newroot = self:elem_add(elem, root)
@@ -156,7 +190,7 @@ function Guibuild:build(layout, root)
         newroot = self:element(elem, root)
         self:build(child, newroot)
       elseif not elem.type then
-        --table of elements, not element
+        --not an element, so it's a table of multiple elements
         for _, t in pairs(elem) do
           self:build({t}, root)
         end
@@ -164,18 +198,6 @@ function Guibuild:build(layout, root)
         newroot = self:element(elem, root)
       end
     end
-  end
-end
-
-function Guibuild:removeGui()
-  log("Guibuild:removeGui")
-  if self.ui_top then
-    if self.events then
-      for _, event in pairs(self.events) do
-        Event.remove(table.unpack(event))
-      end
-    end
-    self.ui_top.clear()
   end
 end
 

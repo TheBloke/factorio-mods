@@ -2,9 +2,10 @@
 -- Includes
 --
 -- mod
+local Defines   = require('defines')
 local Guibuild  = require('gui_build')
 local Guiconfig = require('gui_config')
-local Defines   = require('defines')
+local Csv       = require('csv')
 -- stdlib
 local Entity    = require('__stdlib__/stdlib/entity/entity')
 local Is        = require('__stdlib__/stdlib/utils/is')
@@ -61,7 +62,8 @@ function Graphtool.new(entity)
       ui     = {},
       config = config_default(),
       entity = nil,
-      pole   = nil
+      pole   = nil,
+      ui_events = {}
     }
   Graphtool.metatable(GT)
 
@@ -112,7 +114,7 @@ function Graphtool:onTick()
   if self.config.ticks == 1 or game.tick % self.config.ticks == 0 then
     -- Read the signal network every config.ticks (defaults to 1)
     if self.config.ticks > 1 then
-      self.items = items_default()  -- Wipe all stored values
+      self.items = items_default()  -- Wipe all stored values, ready for next read.
     end
     if self.config.separate then
       for colour, wire in pairs(colours) do

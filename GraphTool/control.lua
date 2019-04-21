@@ -3,7 +3,6 @@
 --
 -- mod
 local Graphtool = require 'graphtool'
-local Csv       = require 'csv'
 local Defines   = require('defines')
 -- stdlib
 local Entity    = require('__stdlib__/stdlib/entity/entity')
@@ -31,8 +30,6 @@ local function onRemoveEntity(event)
 end
 
 local function onTick()
-  if not global._GTs then return end
-
   for _, GT in pairs(global._GTs) do
     if GT.config.enabled then
       GT:onTick()
@@ -54,15 +51,15 @@ local function toggleGui(event, action)
   end
 end
 
-local function config_changed(event)
-  log("Got config changed.")
+local function onInit(event)
+  if not global._GTs then global._GTs = {} end
 end
 
 local function onLoad()
   if global._GTs then
     for _, GT in pairs(global._GTs) do
       Graphtool.metatable(GT) -- rebuild metatables for the Graphtool objects
-      GT:Gui_metatable()       -- rebuild metatables for the Guibuild object(s)
+      GT:Gui_metatable()      -- rebuild metatables for the Guibuild object(s)
       GT:removeAllGui()       -- remove any open GUIs, as their events can't work post-load. User(s) can just re-open them.
     end
   end
@@ -76,3 +73,5 @@ Event.register(evs.on_tick, onTick)
 Event.register(evs.on_gui_opened, function(e) toggleGui(e, "open") end)
 Event.register(evs.on_gui_closed, function(e) toggleGui(e, "close") end)
 Event.on_load(onLoad)
+Event.on_init(onInit)
+Event.on_configuration_changed(onInit)
